@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Journal</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #f5f3ef;
+    --text: #1c1a24;
+    --muted: #b0adbc;
+    --accent: #6d3fd6;
+    --border: rgba(0,0,0,0.07);
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3.5rem 1.5rem 6rem;
+  }
+
+  .header {
+    width: 100%;
+    max-width: 640px;
+    margin-bottom: 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .title-block {}
+
+  .journal-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .date-line {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: fit-content;
+  }
+  .date-line:hover { color: var(--text); }
+  .date-line .edit-icon { font-size: 0.7rem; opacity: 0.5; }
+
+  .date-picker-wrap {
+    display: none;
+    margin-top: 0.5rem;
+  }
+  .date-picker-wrap.open { display: flex; gap: 0.5rem; align-items: center; }
+
+  input[type="date"] {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.8rem;
+    padding: 0.35rem 0.7rem;
+    outline: none;
+    color-scheme: light;
+  }
+
+  .arrow-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .arrow-btn:hover { color: var(--accent); }
+
+  .go-btn {
+    font-size: 0.78rem;
+    color: var(--accent);
+    background: rgba(167,139,250,0.08);
+    border: 1px solid rgba(167,139,250,0.18);
+    border-radius: 8px;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+  }
+  .go-btn:hover { background: rgba(167,139,250,0.15); }
+
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    margin-top: 4px;
+  }
+
+  .day-counter {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    opacity: 0.6;
+  }
+
+  .past-btn {
+    font-size: 0.78rem;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s;
+    white-space: nowrap;
+  }
+  .past-btn:hover { color: var(--text); }
+
+  .thoughts-heading {
+    width: 100%;
+    max-width: 640px;
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+    opacity: 0.18;
+  }
+
+  .write-area {
+    width: 100%;
+    max-width: 640px;
+    min-height: 60vh;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 1rem;
+    line-height: 1.85;
+    resize: none;
+    caret-color: var(--accent);
+  }
+  .write-area::placeholder { color: var(--muted); }
+
+  .bottom-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    padding: 1rem 1.5rem 1.5rem;
+    background: linear-gradient(to top, var(--bg) 60%, transparent);
+  }
+
+  .save-btn {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--accent);
+    background: rgba(167,139,250,0.08);
+    border: 1px solid rgba(167,139,250,0.18);
+    border-radius: 999px;
+    padding: 0.5rem 1.4rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .save-btn:hover { background: rgba(167,139,250,0.15); }
+  .save-btn:active { transform: scale(0.97); }
+
+  .panel-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 50;
+  }
+  .panel-overlay.open { display: block; }
+
+  .panel {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: min(320px, 85vw);
+    background: #eceae5;
+    border-left: 1px solid var(--border);
+    padding: 2rem 1.4rem;
+    overflow-y: auto;
+    z-index: 51;
+    transform: translateX(100%);
+    transition: transform 0.22s ease;
+  }
+  .panel.open { transform: translateX(0); }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.75rem;
+  }
+
+  .panel-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .close-x {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .entry-row {
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .entry-row:last-child { border-bottom: none; }
+
+  .entry-row-date {
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.15rem;
+    transition: color 0.15s;
+  }
+  .entry-row:hover .entry-row-date { color: var(--accent); }
+
+  .entry-row-preview {
+    font-size: 0.77rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .modal-wrap {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  .modal-wrap.open { display: flex; }
+
+  .modal {
+    background: #eceae5;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 580px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .modal-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-date { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+  .modal-edit-btn {
+    font-size: 0.75rem;
+    color: var(--accent);
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-left: auto;
+    margin-right: 1rem;
+  }
+
+  .modal-body {
+    font-size: 0.94rem;
+    line-height: 1.85;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 4.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--accent);
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.5rem 1.1rem;
+    border-radius: 999px;
+    opacity: 0;
+    transition: all 0.22s;
+    pointer-events: none;
+    z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title-block">
+    <div class="journal-title">Daily Journal</div>
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.25rem;">
+      <button class="arrow-btn" onclick="shiftDate(-1)">&#8592;</button>
+      <div class="date-line" id="dateLine" onclick="toggleDatePicker()">
+        <span id="dateText"></span>
+        <span class="edit-icon">✎</span>
+      </div>
+      <button class="arrow-btn" onclick="shiftDate(1)">&#8594;</button>
+    </div>
+    <div class="date-picker-wrap" id="datePickerWrap">
+      <input type="date" id="datePicker" />
+      <button class="go-btn" onclick="goToDate()">go</button>
+    </div>
+  </div>
+  <div class="right-col">
+    <div class="day-counter" id="dayCounter"></div>
+    <button class="past-btn" onclick="openPanel()">past entries</button>
+  </div>
+</div>
+
+<div class="thoughts-heading">thoughts.</div>
+<textarea class="write-area" id="writeArea" placeholder="start writing..."></textarea>
+
+<div class="bottom-bar">
+  <button class="save-btn" onclick="saveEntry()">save</button>
+</div>
+
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <div class="panel-header">
+    <div class="panel-label">entries</div>
+    <button class="close-x" onclick="closePanel()">✕</button>
+  </div>
+  <div id="entriesList"></div>
+</div>
+
+<div class="modal-wrap" id="modalWrap">
+  <div class="modal">
+    <div class="modal-top">
+      <div class="modal-date" id="modalDate"></div>
+      <button class="modal-edit-btn" id="modalEditBtn">edit</button>
+      <button class="close-x" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = 'jrnl_v3';
+let activeDate = new Date().toISOString().split('T')[0];
+
+function fmtFull(k) {
+  const d = new Date(k + 'T00:00:00');
+  return d.toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+}
+
+function getAll() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
+}
+
+const JOURNAL_START = new Date(2026, 4, 10); // May 10 2026, no timezone issues
+
+function setActiveDate(dateKey) {
+  activeDate = dateKey;
+  document.getElementById('dateText').textContent = fmtFull(dateKey);
+  document.getElementById('datePicker').value = dateKey;
+  const all = getAll();
+  const e = all[dateKey];
+  document.getElementById('writeArea').value = e ? e.text || '' : '';
+  const parts = dateKey.split('-');
+  const d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+  const diff = Math.floor((d - JOURNAL_START) / 86400000) + 1;
+  const el = document.getElementById('dayCounter');
+  el.textContent = diff >= 1 ? 'Day ' + diff : '';
+}
+
+function shiftDate(by) {
+  const parts = activeDate.split('-');
+  const d = new Date(+parts[0], +parts[1] - 1, +parts[2] + by);
+  const newKey = d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+  setActiveDate(newKey);
+}
+
+function toggleDatePicker() {
+  const wrap = document.getElementById('datePickerWrap');
+  wrap.classList.toggle('open');
+}
+
+function goToDate() {
+  const val = document.getElementById('datePicker').value;
+  if (!val) return;
+  document.getElementById('datePickerWrap').classList.remove('open');
+  setActiveDate(val);
+  document.getElementById('writeArea').focus();
+}
+
+function saveEntry() {
+  const text = document.getElementById('writeArea').value.trim();
+  const all = getAll();
+  if (!text) {
+    if (all[activeDate]) {
+      delete all[activeDate];
+      localStorage.setItem(KEY, JSON.stringify(all));
+      renderPanel();
+      showToast('entry cleared');
+    } else {
+      showToast('nothing to save');
+    }
+    return;
+  }
+  all[activeDate] = { text, dateStr: fmtFull(activeDate) };
+  localStorage.setItem(KEY, JSON.stringify(all));
+  renderPanel();
+  showToast('saved');
+}
+
+function deleteEntry(k, e) {
+  e.stopPropagation();
+  const all = getAll();
+  delete all[k];
+  localStorage.setItem(KEY, JSON.stringify(all));
+  if (activeDate === k) document.getElementById('writeArea').value = '';
+  renderPanel();
+  showToast('deleted');
+}
+
+function renderPanel() {
+  const all = getAll();
+  const keys = Object.keys(all).sort().reverse();
+  const list = document.getElementById('entriesList');
+  if (!keys.length) {
+    list.innerHTML = '<div style="font-size:0.8rem;color:var(--muted)">no entries yet</div>';
+    return;
+  }
+  list.innerHTML = keys.map(k => {
+    const e = all[k];
+    const preview = (e.text || '').slice(0, 60);
+    return `<div class="entry-row" onclick="jumpToEntry('${k}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="entry-row-date">${e.dateStr || fmtFull(k)}</div>
+        <button onclick="deleteEntry('${k}', event)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.75rem;padding:0 2px;" title="delete">✕</button>
+      </div>
+      <div class="entry-row-preview">${preview || '—'}</div>
+    </div>`;
+  }).join('');
+}
+
+function jumpToEntry(k) {
+  closePanel();
+  setActiveDate(k);
+  document.getElementById('writeArea').focus();
+}
+
+function openPanel() { renderPanel(); document.getElementById('panelOverlay').classList.add('open'); document.getElementById('panel').classList.add('open'); }
+function closePanel() { document.getElementById('panelOverlay').classList.remove('open'); document.getElementById('panel').classList.remove('open'); }
+function closeModal() { document.getElementById('modalWrap').classList.remove('open'); }
+
+document.getElementById('modalWrap').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+setActiveDate(activeDate);
+</script>
+</body>
+</html>
